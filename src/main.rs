@@ -1,4 +1,4 @@
-use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{web, App, Error, HttpResponse, HttpServer};
 use clap::Parser;
 use std::sync::Mutex;
 
@@ -20,11 +20,15 @@ struct AppState {
     storage: Mutex<storage::Storage>,
 }
 
-#[post("{path:.*}")]
 async fn update(path: web::Path<String>, payload: String, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     let mut storage = state.storage.lock().unwrap();
-    storage.update(path.into_inner(), payload);
-    Ok(HttpResponse::Ok().body(format!("{:?}", storage)))
+    let result = storage.update(path.into_inner(), payload);
+    match result {
+        Ok(()) => Ok(HttpResponse::Ok().finish()),
+        Err(error) => match error {
+            storage::Error::NotAnObject(key) => Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key))),
+        },
+    }
 }
 
 #[actix_web::main] // or #[tokio::main]
@@ -40,7 +44,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
-            .service(update)
+            .route("{path:.*}", web::post().to(update))
+            .route("{path:.*}", web::put().to(update))
     })
     .bind((args.host, args.port))?
     .run()

@@ -14,6 +14,10 @@ struct Args {
     /// Port to bind to
     #[clap(short, long, env = "KV_SERVER_PORT", default_value_t = 8124)]
     port: u16,
+
+    /// Path to the database
+    #[clap(short, long, env = "KV_FILE_PATH")]
+    file_path: Option<String>,
 }
 
 struct AppState {
@@ -23,7 +27,7 @@ struct AppState {
 #[get("{path:.*}")]
 async fn get(path: web::Path<String>, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     let storage = state.storage.lock().unwrap();
-    let value = storage.get(path.into_inner());
+    let value = storage.get(&path.into_inner());
     match value {
         Some(value) => Ok(HttpResponse::Ok().json(value)),
         None => Ok(HttpResponse::NotFound().finish()),
@@ -32,7 +36,7 @@ async fn get(path: web::Path<String>, state: web::Data<AppState>) -> Result<Http
 
 async fn update(path: web::Path<String>, payload: String, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     let mut storage = state.storage.lock().unwrap();
-    let result = storage.update(path.into_inner(), payload);
+    let result = storage.update(&path.into_inner(), payload);
     match result {
         Ok(()) => Ok(HttpResponse::Ok().finish()),
         Err(error) => match error {
@@ -44,7 +48,7 @@ async fn update(path: web::Path<String>, payload: String, state: web::Data<AppSt
 #[delete("{path:.*}")]
 async fn delete(path: web::Path<String>, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     let mut storage = state.storage.lock().unwrap();
-    let result = storage.delete(path.into_inner());
+    let result = storage.delete(&path.into_inner());
     match result {
         Ok(()) => Ok(HttpResponse::Ok().finish()),
         Err(error) => match error {
@@ -60,7 +64,7 @@ async fn main() -> std::io::Result<()> {
     println!("Listening to {}:{}", args.host, args.port);
 
     let state = web::Data::new(AppState {
-        storage: Mutex::new(storage::Storage::from_file().expect("Failed to load storage")),
+        storage: Mutex::new(storage::Storage::from_file(args.file_path)),
     });
 
     HttpServer::new(move || {

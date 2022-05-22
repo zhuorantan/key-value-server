@@ -1,3 +1,5 @@
+use std::path;
+use std::fs;
 use serde_json::{Map, Value};
 
 type Object = Map<String, Value>;
@@ -10,18 +12,33 @@ pub enum Error {
 #[derive(Debug)]
 pub struct Storage {
     data: Value,
+    path: Option<String>,
 }
 
 impl Storage {
-    pub fn from_file() -> Result<Storage, Error> {
-        Ok(Storage { data: Value::Object(Map::new()) })
+    pub fn from_file(path: Option<String>) -> Storage {
+        let object: Object;
+        if let Some(ref path) = path {
+            if path::Path::new(&path).exists() {
+                let content = fs::read_to_string(&path)
+                    .expect("Failed to read file");
+                object = serde_json::from_str(&content)
+                    .expect("Failed to parse JSON");
+            } else {
+                object = Object::new();
+            }
+        } else {
+            object = Object::new();
+        }
+
+        Storage { data: Value::Object(object), path }
     }
 }
 
 impl Storage {
-    pub fn get(&self, path: String) -> Option<&Value> {
+    pub fn get(&self, path: &str) -> Option<&Value> {
         let mut current = &self.data;
-        for part in self.parse_path(&path) {
+        for part in self.parse_path(path) {
             if part.is_empty() {
                 continue;
             }
@@ -33,31 +50,33 @@ impl Storage {
         Some(current)
     }
 
-    pub fn update(&mut self, path: String, payload: String) -> Result<(), Error> {
+    pub fn update(&mut self, path: &str, payload: String) -> Result<(), Error> {
         let value: Value = serde_json::from_str(&payload).unwrap_or(Value::String(payload));
 
-        let mut path_parts = self.parse_path(&path);
+        let mut path_parts = self.parse_path(path);
         let last = path_parts.pop().unwrap();
 
         match self.get_object_or_insert(&path_parts) {
             Ok(target) => {
                 target.insert(last, value);
+                self.save();
                 Ok(())
-            }
-            Err(e) => Err(e),
+            },
+            Err(error) => Err(error),
         }
     }
 
-    pub fn delete(&mut self, path: String) -> Result<(), Error> {
-        let mut path_parts = self.parse_path(&path);
+    pub fn delete(&mut self, path: &str) -> Result<(), Error> {
+        let mut path_parts = self.parse_path(path);
         let last = path_parts.pop().unwrap();
 
         match self.get_object_or_insert(&path_parts) {
             Ok(target) => {
-                target.remove(&last);
+            target.remove(&last);
+                self.save();
                 Ok(())
-            }
-            Err(e) => Err(e),
+            },
+            Err(error) => Err(error),
         }
     }
 
@@ -87,5 +106,15 @@ impl Storage {
             }
         }
         Ok(current)
+    }
+
+    fn save(&self) {
+        match self.path {
+            Some(ref path) => {
+                let content = serde_json::to_string(&self.data).unwrap();
+                fs::write(path, content).expect("Failed to write file");
+            },
+            None => (),
+        }
     }
 }

@@ -16,7 +16,7 @@ struct Args {
     port: u16,
 
     /// Path to the database
-    #[clap(short, long, env = "KV_FILE_PATH")]
+    #[clap(short, long, env = "KV_SERVER_FILE_PATH")]
     file_path: Option<String>,
 }
 

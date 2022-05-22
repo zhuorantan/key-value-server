@@ -8,19 +8,24 @@ This is a toy project for experimental use. It is NOT designed for production.
 
 ## Start the server
 
-Directly run the executable to start the server at `localhost:8124`.
+### Options
 
-Use `--host` and `--port` options to customize listening address:
+||Environment|Default|Use|
+|-|-|-|-|
+|`--host`|`KV_SERVER_HOST`|`localhost`|Listening host|
+|`--port`|`KV_SERVER_PORT`|`8124`|Listening port|
+|`--file-path`|`KV_SERVER_FILE_PATH`||File path for persisting data|
+
+If `--file-path` is not provided, the data would only be stored in memory.
+
+### Docker
 
 ```sh
-./key-value-server --host 0.0.0.0 --port 12345
+docker build --tag kv-server https://github.com/zhuorantan/key-value-server
+docker run -v ./data.json:/app/data.json -p 8124:8124 kv-server
 ```
 
-Data would be stored only in memory by default. To persist the data, provide a file path using the option `--file-path`:
-
-```sh
-./key-value-server --file-path ./data.json
-```
+By default, `--host` is `0.0.0.0` and `--file-path` is `/app/data.json` in this image.
 
 ## Client usage
 

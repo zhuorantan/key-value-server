@@ -21,7 +21,7 @@ impl Storage {
 impl Storage {
     pub fn get(&self, path: String) -> Option<&Value> {
         let mut current = &self.data;
-        for part in path.split('/') {
+        for part in self.parse_path(&path) {
             if part.is_empty() {
                 continue;
             }
@@ -48,8 +48,25 @@ impl Storage {
         }
     }
 
+    pub fn delete(&mut self, path: String) -> Result<(), Error> {
+        let mut path_parts = self.parse_path(&path);
+        let last = path_parts.pop().unwrap();
+
+        match self.get_object_or_insert(&path_parts) {
+            Ok(target) => {
+                target.remove(&last);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
     fn parse_path(&self, path: &str) -> Vec<String> {
-        path.split('/').map(|s| s.to_string()).collect::<Vec<String>>()
+        path
+            .split('/')
+            .filter(|part| !part.is_empty())
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
     }
 
     fn get_object_or_insert(&mut self, path_parts: &Vec<String>) -> Result<&mut Object, Error> {

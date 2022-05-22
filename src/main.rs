@@ -1,4 +1,4 @@
-use actix_web::{get, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{get, web, App, Error, HttpResponse, HttpServer, delete};
 use clap::Parser;
 use std::sync::Mutex;
 
@@ -41,6 +41,18 @@ async fn update(path: web::Path<String>, payload: String, state: web::Data<AppSt
     }
 }
 
+#[delete("{path:.*}")]
+async fn delete(path: web::Path<String>, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let mut storage = state.storage.lock().unwrap();
+    let result = storage.delete(path.into_inner());
+    match result {
+        Ok(()) => Ok(HttpResponse::Ok().finish()),
+        Err(error) => match error {
+            storage::Error::NotAnObject(key) => Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key))),
+        },
+    }
+}
+
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
@@ -57,6 +69,7 @@ async fn main() -> std::io::Result<()> {
             .service(get)
             .route("{path:.*}", web::post().to(update))
             .route("{path:.*}", web::put().to(update))
+            .service(delete)
     })
     .bind((args.host, args.port))?
     .run()

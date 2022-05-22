@@ -9,23 +9,37 @@ pub enum Error {
 
 #[derive(Debug)]
 pub struct Storage {
-    data: Object,
+    data: Value,
 }
 
 impl Storage {
     pub fn from_file() -> Result<Storage, Error> {
-        Ok(Storage { data: Map::new() })
+        Ok(Storage { data: Value::Object(Map::new()) })
     }
 }
 
 impl Storage {
+    pub fn get(&self, path: String) -> Option<&Value> {
+        let mut current = &self.data;
+        for part in path.split('/') {
+            if part.is_empty() {
+                continue;
+            }
+            match current.get(part) {
+                Some(value) => current = value,
+                None => return None,
+            }
+        }
+        Some(current)
+    }
+
     pub fn update(&mut self, path: String, payload: String) -> Result<(), Error> {
         let value: Value = serde_json::from_str(&payload).unwrap_or(Value::String(payload));
 
         let mut path_parts = self.parse_path(&path);
         let last = path_parts.pop().unwrap();
 
-        match self.get_or_insert(&path_parts) {
+        match self.get_object_or_insert(&path_parts) {
             Ok(target) => {
                 target.insert(last, value);
                 Ok(())
@@ -38,8 +52,8 @@ impl Storage {
         path.split('/').map(|s| s.to_string()).collect::<Vec<String>>()
     }
 
-    fn get_or_insert(&mut self, path_parts: &Vec<String>) -> Result<&mut Object, Error> {
-        let mut current = &mut self.data;
+    fn get_object_or_insert(&mut self, path_parts: &Vec<String>) -> Result<&mut Object, Error> {
+        let mut current = self.data.as_object_mut().unwrap();
         for part in path_parts {
             if !current.contains_key(part) {
                 current.insert(part.to_string(), Value::Object(Map::new()));

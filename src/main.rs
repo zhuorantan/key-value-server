@@ -1,4 +1,4 @@
-use actix_web::{web, App, Error, HttpResponse, HttpServer};
+use actix_web::{get, web, App, Error, HttpResponse, HttpServer};
 use clap::Parser;
 use std::sync::Mutex;
 
@@ -18,6 +18,16 @@ struct Args {
 
 struct AppState {
     storage: Mutex<storage::Storage>,
+}
+
+#[get("{path:.*}")]
+async fn get(path: web::Path<String>, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let storage = state.storage.lock().unwrap();
+    let value = storage.get(path.into_inner());
+    match value {
+        Some(value) => Ok(HttpResponse::Ok().json(value)),
+        None => Ok(HttpResponse::NotFound().finish()),
+    }
 }
 
 async fn update(path: web::Path<String>, payload: String, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
@@ -44,6 +54,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .service(get)
             .route("{path:.*}", web::post().to(update))
             .route("{path:.*}", web::put().to(update))
     })

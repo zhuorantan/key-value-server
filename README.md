@@ -22,7 +22,7 @@ If `--file-path` is not provided, the data would only be stored in memory.
 
 ```sh
 docker build --tag kv-server https://github.com/zhuorantan/key-value-server
-docker run -v ./data.json:/app/data.json -p 8124:8124 kv-server
+docker run -p 8124:8124 --rm kv-server
 ```
 
 By default, `--host` is `0.0.0.0` and `--file-path` is `/app/data.json` in this image.

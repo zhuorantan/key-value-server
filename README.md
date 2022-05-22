@@ -21,7 +21,7 @@ If `--file-path` is not provided, the data would only be stored in memory.
 ### Docker
 
 ```sh
-docker build --tag kv-server https://github.com/zhuorantan/key-value-server
+docker build --tag kv-server github.com/zhuorantan/key-value-server#main
 docker run -p 8124:8124 --rm kv-server
 ```
 

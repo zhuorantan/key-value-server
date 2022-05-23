@@ -16,7 +16,7 @@ jobs:
         uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
-        id: builx
+        id: buildx
         uses: docker/setup-buildx-action@v2
       
       - name: Log in to Docker Hub

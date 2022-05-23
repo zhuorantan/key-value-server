@@ -111,7 +111,12 @@ impl Storage {
     fn save(&self) {
         match self.path {
             Some(ref path) => {
-                let content = serde_json::to_string(&self.data).unwrap();
+                let directory = path::Path::new(&path).parent().expect("Failed to get parent directory");
+                if !directory.exists() {
+                    fs::create_dir_all(directory).expect("Failed to create directory");
+                }
+
+                let content = serde_json::to_string(&self.data).expect("Failed to serialize JSON");
                 fs::write(path, content).expect("Failed to write file");
             },
             None => (),

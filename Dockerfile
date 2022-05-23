@@ -6,6 +6,7 @@ RUN cargo build --release
 FROM debian:stable-slim
 
 ENV KV_SERVER_HOST=0.0.0.0
+ENV KV_SERVER_PORT=80
 ENV KV_SERVER_FILE_PATH=/app/data.json
 
 COPY --from=builder /app/target/release/key-value-server /

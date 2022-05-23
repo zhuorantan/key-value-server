@@ -25,7 +25,7 @@ docker build --tag kv-server github.com/zhuorantan/key-value-server#main
 docker run -p 8124:8124 --rm kv-server
 ```
 
-By default, `--host` is `0.0.0.0` and `--file-path` is `/app/data.json` in this image.
+By default, `KV_SERVER_HOST` is `0.0.0.0`, `KV_SERVER_PORT` is `80`, and `KV_SERVER_FILE_PATH` is `/app/data.json` in this image.
 
 ## Client usage
 

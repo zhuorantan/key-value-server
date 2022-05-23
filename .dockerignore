@@ -1,4 +1,4 @@
-/target
-Dockerfile
-README.md
-LICENSE
+*
+!src
+!Cargo.toml
+!Cargo.lock

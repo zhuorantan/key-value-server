@@ -3,7 +3,7 @@ WORKDIR /app
 COPY . /app
 RUN cargo build --release
 
-FROM gcr.io/distroless/cc
+FROM alpine
 
 ARG KV_SERVER_HOST=0.0.0.0
 ARG KV_SERVER_PORT

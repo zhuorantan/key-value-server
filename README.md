@@ -55,7 +55,7 @@ POST 'foo' http://localhost:1234/a/b/c
 result: {"a": {"b": {"c": "foo"}}}
 ```
 
-If one of the immediate values is not an object, the request is invalid:
+If one of the intermediate values is not an object, the request is invalid:
 
 ```
 {"a": {"b": "foo"}}

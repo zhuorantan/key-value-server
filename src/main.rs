@@ -1,4 +1,4 @@
-use actix_web::{get, web, App, Error, HttpResponse, HttpServer, delete};
+use actix_web::{get, patch, web, App, Error, HttpResponse, HttpServer, delete};
 use clap::Parser;
 use std::sync::Mutex;
 
@@ -51,17 +51,23 @@ async fn update(path: web::Path<String>, payload: String, state: web::Data<AppSt
         Ok(()) => {
             println!("Updated value {} for path {}", payload, key_path);
             Ok(HttpResponse::Ok().finish())
-        }
-        Err(error) => match error {
-            storage::Error::NotAnObject(key) => {
-                println!("Key {} is not an object", key);
-                Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key)))
-            }
-            storage::Error::NoKey => {
-                println!("No key found for path {}", key_path);
-                Ok(HttpResponse::BadRequest().body("No key provided"))
-            }
         },
+        Err(error) => Ok(handle_error(&error, &key_path)),
+    }
+}
+
+#[patch("{path:.*}")]
+async fn patch(path: web::Path<String>, payload: String, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let key_path = &path.into_inner();
+    let mut storage = state.storage.lock().unwrap();
+    let result = storage.append(key_path, &payload);
+
+    match result {
+        Ok(()) => {
+            println!("Patched value {} for path {}", payload, key_path);
+            Ok(HttpResponse::Ok().finish())
+        },
+        Err(error) => Ok(handle_error(&error, &key_path)),
     }
 }
 
@@ -75,17 +81,21 @@ async fn delete(path: web::Path<String>, state: web::Data<AppState>) -> Result<H
         Ok(()) => {
             println!("Deleted value for path {}", key_path);
             Ok(HttpResponse::Ok().finish())
-        }
-        Err(error) => match error {
-            storage::Error::NotAnObject(key) => {
-                println!("Key {} is not an object", key);
-                Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key)))
-            }
-            storage::Error::NoKey => {
-                println!("No key found for path {}", key_path);
-                Ok(HttpResponse::BadRequest().body("No key provided"))
-            }
         },
+        Err(error) => Ok(handle_error(&error, &key_path)),
+    }
+}
+
+fn handle_error(error: &storage::Error, path: &str) -> HttpResponse {
+    match error {
+        storage::Error::NotAnObject(key) => {
+            println!("Key {} is not an object", key);
+            HttpResponse::BadRequest().body(format!("{} is not an object", key))
+        }
+        storage::Error::NoKey => {
+            println!("No key found for path {}", path);
+            HttpResponse::BadRequest().body("No key provided")
+        }
     }
 }
 
@@ -108,6 +118,7 @@ async fn main() -> std::io::Result<()> {
             .service(get)
             .route("{path:.*}", web::post().to(update))
             .route("{path:.*}", web::put().to(update))
+            .service(patch)
             .service(delete)
     })
     .bind((args.host, args.port))?

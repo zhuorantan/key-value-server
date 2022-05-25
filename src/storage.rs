@@ -70,6 +70,26 @@ impl Storage {
         }
     }
 
+    pub fn append(&mut self, path: &str, payload: &str) -> Result<(), Error> {
+        let path_parts = self.parse_path(path);
+
+        match self.get_object_or_insert(&path_parts) {
+            Ok(target) => {
+                let value: serde_json::Result<Object> = serde_json::from_str(&payload);
+
+                match value {
+                    Ok(mut value) => {
+                        target.append(&mut value);
+                        self.save();
+                        Ok(())
+                    },
+                    Err(..) => Err(Error::NotAnObject(payload.to_string())),
+                }
+            },
+            Err(error) => Err(error),
+        }
+    }
+
     pub fn delete(&mut self, path: &str) -> Result<(), Error> {
         let mut path_parts = self.parse_path(path);
 

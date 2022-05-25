@@ -7,6 +7,7 @@ type Object = Map<String, Value>;
 #[derive(Debug)]
 pub enum Error {
   NotAnObject(String),
+  NoKey,
 }
 
 #[derive(Debug)]
@@ -51,32 +52,39 @@ impl Storage {
     }
 
     pub fn update(&mut self, path: &str, payload: String) -> Result<(), Error> {
-        let value: Value = serde_json::from_str(&payload).unwrap_or(Value::String(payload));
-
         let mut path_parts = self.parse_path(path);
-        let last = path_parts.pop().unwrap();
 
-        match self.get_object_or_insert(&path_parts) {
-            Ok(target) => {
-                target.insert(last, value);
-                self.save();
-                Ok(())
+        match path_parts.pop() {
+            Some(last) => {
+                match self.get_object_or_insert(&path_parts) {
+                    Ok(target) => {
+                        let value: Value = serde_json::from_str(&payload).unwrap_or(Value::String(payload));
+                        target.insert(last, value);
+                        self.save();
+                        Ok(())
+                    },
+                    Err(error) => Err(error),
+                }
             },
-            Err(error) => Err(error),
+            None => Err(Error::NoKey),
         }
     }
 
     pub fn delete(&mut self, path: &str) -> Result<(), Error> {
         let mut path_parts = self.parse_path(path);
-        let last = path_parts.pop().unwrap();
 
-        match self.get_object_or_insert(&path_parts) {
-            Ok(target) => {
-            target.remove(&last);
-                self.save();
-                Ok(())
+        match path_parts.pop() {
+            Some(last) => {
+                match self.get_object_or_insert(&path_parts) {
+                    Ok(target) => {
+                        target.remove(&last);
+                        self.save();
+                        Ok(())
+                    },
+                    Err(error) => Err(error),
+                }
             },
-            Err(error) => Err(error),
+            None => Err(Error::NoKey),
         }
     }
 

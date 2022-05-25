@@ -41,6 +41,7 @@ async fn update(path: web::Path<String>, payload: String, state: web::Data<AppSt
         Ok(()) => Ok(HttpResponse::Ok().finish()),
         Err(error) => match error {
             storage::Error::NotAnObject(key) => Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key))),
+            storage::Error::NoKey => Ok(HttpResponse::BadRequest().body("No key provided")),
         },
     }
 }
@@ -53,6 +54,7 @@ async fn delete(path: web::Path<String>, state: web::Data<AppState>) -> Result<H
         Ok(()) => Ok(HttpResponse::Ok().finish()),
         Err(error) => match error {
             storage::Error::NotAnObject(key) => Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key))),
+            storage::Error::NoKey => Ok(HttpResponse::BadRequest().body("No key provided")),
         },
     }
 }

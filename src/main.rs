@@ -26,35 +26,65 @@ struct AppState {
 
 #[get("{path:.*}")]
 async fn get(path: web::Path<String>, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let key_path = &path.into_inner();
     let storage = state.storage.lock().unwrap();
-    let value = storage.get(&path.into_inner());
+    let value = storage.get(key_path);
+
     match value {
-        Some(value) => Ok(HttpResponse::Ok().json(value)),
-        None => Ok(HttpResponse::NotFound().finish()),
+        Some(value) => {
+            println!("Returning value {} for path {}", value, key_path);
+            Ok(HttpResponse::Ok().json(value))
+        }
+        None => {
+            println!("No value found for path {}", key_path);
+            Ok(HttpResponse::NotFound().finish())
+        },
     }
 }
 
 async fn update(path: web::Path<String>, payload: String, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let key_path = &path.into_inner();
     let mut storage = state.storage.lock().unwrap();
-    let result = storage.update(&path.into_inner(), payload);
+    let result = storage.update(key_path, &payload);
+
     match result {
-        Ok(()) => Ok(HttpResponse::Ok().finish()),
+        Ok(()) => {
+            println!("Updated value {} for path {}", payload, key_path);
+            Ok(HttpResponse::Ok().finish())
+        }
         Err(error) => match error {
-            storage::Error::NotAnObject(key) => Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key))),
-            storage::Error::NoKey => Ok(HttpResponse::BadRequest().body("No key provided")),
+            storage::Error::NotAnObject(key) => {
+                println!("Key {} is not an object", key);
+                Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key)))
+            }
+            storage::Error::NoKey => {
+                println!("No key found for path {}", key_path);
+                Ok(HttpResponse::BadRequest().body("No key provided"))
+            }
         },
     }
 }
 
 #[delete("{path:.*}")]
 async fn delete(path: web::Path<String>, state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let key_path = &path.into_inner();
     let mut storage = state.storage.lock().unwrap();
-    let result = storage.delete(&path.into_inner());
+    let result = storage.delete(key_path);
+
     match result {
-        Ok(()) => Ok(HttpResponse::Ok().finish()),
+        Ok(()) => {
+            println!("Deleted value for path {}", key_path);
+            Ok(HttpResponse::Ok().finish())
+        }
         Err(error) => match error {
-            storage::Error::NotAnObject(key) => Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key))),
-            storage::Error::NoKey => Ok(HttpResponse::BadRequest().body("No key provided")),
+            storage::Error::NotAnObject(key) => {
+                println!("Key {} is not an object", key);
+                Ok(HttpResponse::BadRequest().body(format!("{} is not an object", key)))
+            }
+            storage::Error::NoKey => {
+                println!("No key found for path {}", key_path);
+                Ok(HttpResponse::BadRequest().body("No key provided"))
+            }
         },
     }
 }
@@ -62,12 +92,15 @@ async fn delete(path: web::Path<String>, state: web::Data<AppState>) -> Result<H
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
+    let storage = storage::Storage::from_file(args.file_path);
 
-    println!("Listening to {}:{}", args.host, args.port);
+    println!("Loaded storage with data {}", storage.get("").unwrap().to_string());
 
     let state = web::Data::new(AppState {
-        storage: Mutex::new(storage::Storage::from_file(args.file_path)),
+        storage: Mutex::new(storage),
     });
+
+    println!("Listening to {}:{}", args.host, args.port);
 
     HttpServer::new(move || {
         App::new()

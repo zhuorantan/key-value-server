@@ -51,14 +51,14 @@ impl Storage {
         Some(current)
     }
 
-    pub fn update(&mut self, path: &str, payload: String) -> Result<(), Error> {
+    pub fn update(&mut self, path: &str, payload: &str) -> Result<(), Error> {
         let mut path_parts = self.parse_path(path);
 
         match path_parts.pop() {
             Some(last) => {
                 match self.get_object_or_insert(&path_parts) {
                     Ok(target) => {
-                        let value: Value = serde_json::from_str(&payload).unwrap_or(Value::String(payload));
+                        let value: Value = serde_json::from_str(&payload).unwrap_or(Value::String(payload.to_string()));
                         target.insert(last, value);
                         self.save();
                         Ok(())
